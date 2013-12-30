@@ -1,0 +1,108 @@
+Full Power
+----------
+
+0. Download Nutch and Solr
+
+These instructions were tried on Nutch 1.7 and Solr 4.6.0. They did not
+work on Nutch 2.2.1.
+
+Nutch 1.7:
+
+http://www.apache.org/dyn/closer.cgi/nutch/1.7/apache-nutch-1.7-bin.tar.gz
+http://apache.org/dist/nutch/1.7/apache-nutch-1.7-bin.tar.gz.asc
+
+Solr 4.6.0:
+
+http://www.trieuvan.com/apache/lucene/solr/4.6.0/
+
+1. Configure Nutch
+
+1.1. `conf/nutch-site.xml`
+
+Add these property settings to your site config. They set the user
+agent, the verbosity of logs, and which HTTP client to use.
+
+    <property>
+      <name>http.agent.name</name>
+      <value>Testing Nutch</value>
+      <description>HTTP 'User-Agent' request header. MUST NOT be empty - 
+      please set this to a single word uniquely related to your organization.
+    
+      NOTE: You should also check other related properties:
+    
+    	http.robots.agents
+    	http.agent.description
+    	http.agent.url
+    	http.agent.email
+    	http.agent.version
+    
+      and set their values appropriately.
+    
+      </description>
+    </property>
+    
+    <property>
+      <name>http.robots.agents</name>
+      <value>Testing Nutch,*</value>
+      <description>The agent strings we'll look for in robots.txt files,
+      comma-separated, in decreasing order of precedence. You should
+      put the value of http.agent.name as the first agent name, and keep the
+      default * at the end of the list. E.g.: BlurflDev,Blurfl,*
+      </description>
+    </property>
+    
+    <property>
+      <name>http.verbose</name>
+      <value>true</value>
+      <description>If true, HTTP will log more verbosely.</description>
+    </property>
+    
+    <property>
+      <name>plugin.includes</name>
+      <value>protocol-httpclient|urlfilter-regex|parse-(html|tika)|index-(basic|anchor)|indexer-solr|scoring-opic|urlnormalizer-(pass|regex|basic)</value>
+      <description>Regular expression naming plugin directory names to
+      include.  Any plugin not matching this expression is excluded.
+      In any case you need at least include the nutch-extensionpoints plugin. By
+      default Nutch includes crawling just HTML and plain text via HTTP,
+      and basic indexing and search plugins. In order to use HTTPS please enable 
+      protocol-httpclient, but be aware of possible intermittent problems with the 
+      underlying commons-httpclient library.
+      </description>
+    </property>
+
+1.2. `urls/seeds`
+
+Populate the seeds file with our important Web sites, one on each line:
+
+    https://mike-burns.com/
+    https://matthoran.com/
+    http://ejohn.org/
+
+2. Configure Solr
+
+2.1. Make a `nutch` collection:
+
+    cd example/solr
+    cp -a collection1 nutch
+    sed s/collection1/nutch/ -i nutch/core.properties
+
+2.2. Use the schema that ships with Nutch:
+
+    cp $NUTCH_DIR/conf/schema-solr4.xml nutch/conf/schema.xml
+    $VISUAL nutch/conf/schema.xml
+    # Add this to the <fields> section:
+    # <field name="_version_" type="long" indexed="true" stored="true"/>
+
+3. Start Solr
+
+    cd $SOLR_DIR/example
+    java -jar start.jar
+
+4. Run the Nutch crawler
+
+This will run it for three steps, starting with the seed in
+`urls/seeds`, indexing into the Solr server started in (3). Crawler
+persistence will be stored under the directory named `TheBigCrawl`.
+
+    cd $NUTCH_DIR
+    bin/crawl urls TheBigCrawl http://localhost:8983/solr/nutch 3
